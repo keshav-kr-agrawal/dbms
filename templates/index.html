@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Management System</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fa-solid fa-layer-group logo-icon"></i>
+                <div class="logo-text">
+                    <h2>LMS</h2>
+                    <span>Enterprise Portal</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-tab="tab-dashboard">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </button>
+                <button class="nav-btn" data-tab="tab-leads">
+                    <i class="fa-solid fa-users-rectangle"></i> Leads Manager
+                </button>
+                <button class="nav-btn" data-tab="tab-followups">
+                    <i class="fa-solid fa-calendar-check"></i> Follow-Ups
+                </button>
+                <button class="nav-btn" data-tab="tab-customers">
+                    <i class="fa-solid fa-handshake"></i> Customers
+                </button>
+                <button class="nav-btn" data-tab="tab-logs">
+                    <i class="fa-solid fa-receipt"></i> Activity Logs
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-role-control">
+                    <label for="role-select"><i class="fa-solid fa-user-shield"></i> Active Role</label>
+                    <select id="role-select" onchange="updateRolePermissions()">
+                        <option value="Administrator">Administrator</option>
+                        <option value="SalesManager">Sales Manager</option>
+                        <option value="SalesRepresentative" selected>Sales Rep</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h1 id="page-title">Dashboard Overview</h1>
+                    <p id="page-subtitle">Real-time statistics and lead pipeline overview</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openModal('modal-add-lead')">
+                        <i class="fa-solid fa-plus"></i> New Lead
+                    </button>
+                </div>
+            </header>
+
+            <!-- Notification Toast -->
+            <div id="toast" class="toast hidden">
+                <div class="toast-content">
+                    <i class="fa-solid fa-circle-check toast-icon"></i>
+                    <span id="toast-message">Success! Action completed.</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <section id="tab-dashboard" class="tab-content active">
+                <!-- Overview Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card card-glow-blue">
+                        <div class="stat-icon icon-blue"><i class="fa-solid fa-user-group"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Leads</span>
+                            <h3 id="stat-total-leads">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card card-glow-amber">
+                        <div class="stat-icon icon-amber"><i class="fa-solid fa-spinner"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Active / Open</span>
+                            <h3 id="stat-open-leads">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card card-glow-green">
+                        <div class="stat-icon icon-green"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Converted Customers</span>
+                            <h3 id="stat-converted-customers">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card card-glow-emerald">
+                        <div class="stat-icon icon-emerald"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Revenue</span>
+                            <h3 id="stat-total-revenue">₹0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lower Dashboard Section (Stored Procedure & Workload) -->
+                <div class="dashboard-row">
+                    <!-- Stored Procedure Panel -->
+                    <div class="card sp-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-database text-purple"></i> Stored Procedure Call</h3>
+                            <span class="badge badge-purple">GetLeadSummaryByRep()</span>
+                        </div>
+                        <p class="panel-desc">Runs the database stored procedure to fetch a live summary of total, open, and converted leads for any selected sales representative.</p>
+                        <div class="sp-controls">
+                            <div class="form-group select-inline">
+                                <label for="sp-rep-select">Select Sales Representative</label>
+                                <select id="sp-rep-select" onchange="runRepStoredProcedure()"></select>
+                            </div>
+                        </div>
+                        <div class="sp-results-grid">
+                            <div class="sp-result-card">
+                                <span class="res-num" id="sp-total">0</span>
+                                <span class="res-label">Assigned Leads</span>
+                            </div>
+                            <div class="sp-result-card">
+                                <span class="res-num" id="sp-open">0</span>
+                                <span class="res-label">Open/Contacted</span>
+                            </div>
+                            <div class="sp-result-card">
+                                <span class="res-num text-success" id="sp-converted">0</span>
+                                <span class="res-label">Converted</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Workload Work Chart / Table -->
+                    <div class="card workload-panel">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-pie text-cyan"></i> Workload Distribution</h3>
+                            <span class="badge badge-cyan">Lead Assignment Stats</span>
+                        </div>
+                        <div class="workload-list" id="workload-container">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Leads Manager Tab -->
+            <section id="tab-leads" class="tab-content">
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="lead-search" placeholder="Search leads by name, email or phone..." oninput="filterLeads()">
+                    </div>
+                    <div class="filter-controls">
+                        <select id="filter-status" onchange="filterLeads()">
+                            <option value="">All Statuses</option>
+                            <option value="Open">Open</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Converted">Converted</option>
+                            <option value="Lost">Lost</option>
+                        </select>
+                        <select id="filter-source" onchange="filterLeads()">
+                            <option value="">All Sources</option>
+                            <option value="Website">Website</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email Campaign">Email Campaign</option>
+                            <option value="Walk-in">Walk-in</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Contact Information</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Created At</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leads-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Follow-ups Tab -->
+            <section id="tab-followups" class="tab-content">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Lead Name</th>
+                                <th>Assigned Representative</th>
+                                <th>Follow-up Date</th>
+                                <th>Remarks / Comments</th>
+                                <th>Next Date</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="followups-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Customers Tab -->
+            <section id="tab-customers" class="tab-content">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Company Name</th>
+                                <th>Address</th>
+                                <th>Representative</th>
+                                <th>Conversion Date</th>
+                                <th>Deal Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Activity Logs Tab -->
+            <section id="tab-logs" class="tab-content">
+                <div class="log-info-box">
+                    <div class="info-icon"><i class="fa-solid fa-bolt-lightning text-amber"></i></div>
+                    <div class="info-text">
+                        <h4>Database Trigger Auditing</h4>
+                        <p>The logs below show auto-generated activities. Whenever a new lead is inserted, the database trigger <code>after_lead_insert</code> automatically records an entry in the <code>activity_log</code> table.</p>
+                    </div>
+                </div>
+                <div class="log-timeline-container" id="log-timeline">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ADD LEAD MODAL -->
+    <div id="modal-add-lead" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-plus"></i> Add New Lead</h3>
+                <button class="close-btn" onclick="closeModal('modal-add-lead')">&times;</button>
+            </div>
+            <form id="add-lead-form" onsubmit="submitAddLead(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add-first-name">First Name *</label>
+                        <input type="text" id="add-first-name" required placeholder="e.g. John">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-last-name">Last Name *</label>
+                        <input type="text" id="add-last-name" required placeholder="e.g. Doe">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add-email">Email Address</label>
+                        <input type="email" id="add-email" placeholder="e.g. john@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-phone">Phone Number</label>
+                        <input type="text" id="add-phone" placeholder="e.g. 9876543210">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add-source">Lead Source</label>
+                        <select id="add-source">
+                            <option value="Website">Website</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email Campaign">Email Campaign</option>
+                            <option value="Walk-in">Walk-in</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-assigned">Assign Sales Rep</label>
+                        <select id="add-assigned">
+                            <option value="">Leave Unassigned</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-lead')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT LEAD MODAL -->
+    <div id="modal-edit-lead" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-pen"></i> Edit Lead Information</h3>
+                <button class="close-btn" onclick="closeModal('modal-edit-lead')">&times;</button>
+            </div>
+            <form id="edit-lead-form" onsubmit="submitEditLead(event)">
+                <input type="hidden" id="edit-lead-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-first-name">First Name *</label>
+                        <input type="text" id="edit-first-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-last-name">Last Name *</label>
+                        <input type="text" id="edit-last-name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-email">Email Address</label>
+                        <input type="email" id="edit-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-phone">Phone Number</label>
+                        <input type="text" id="edit-phone">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-source">Lead Source</label>
+                        <select id="edit-source">
+                            <option value="Website">Website</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email Campaign">Email Campaign</option>
+                            <option value="Walk-in">Walk-in</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-status">Status</label>
+                        <select id="edit-status">
+                            <option value="Open">Open</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Converted">Converted</option>
+                            <option value="Lost">Lost</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-assigned">Assigned Representative</label>
+                    <select id="edit-assigned">
+                        <option value="">Leave Unassigned</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-lead')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONVERT TO CUSTOMER MODAL -->
+    <div id="modal-convert-lead" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-handshake-angle"></i> Convert Lead to Customer</h3>
+                <button class="close-btn" onclick="closeModal('modal-convert-lead')">&times;</button>
+            </div>
+            <form id="convert-lead-form" onsubmit="submitConvertLead(event)">
+                <input type="hidden" id="convert-lead-id">
+                <div class="form-group">
+                    <label>Lead Details</label>
+                    <div class="read-only-detail" id="convert-lead-name">--</div>
+                </div>
+                <div class="form-group">
+                    <label for="convert-company">Company Name</label>
+                    <input type="text" id="convert-company" placeholder="e.g. Acme Corporation" required>
+                </div>
+                <div class="form-group">
+                    <label for="convert-address">Company Address</label>
+                    <input type="text" id="convert-address" placeholder="e.g. 100, Outer Ring Rd, Bengaluru" required>
+                </div>
+                <div class="form-group">
+                    <label for="convert-value">Deal Value (₹) *</label>
+                    <input type="number" step="0.01" id="convert-value" placeholder="e.g. 150000" required min="0">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-convert-lead')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Convert Successfully</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCHEDULE FOLLOW-UP MODAL -->
+    <div id="modal-schedule-followup" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-calendar-plus"></i> Schedule Follow-Up</h3>
+                <button class="close-btn" onclick="closeModal('modal-schedule-followup')">&times;</button>
+            </div>
+            <form id="schedule-followup-form" onsubmit="submitScheduleFollowup(event)">
+                <input type="hidden" id="followup-lead-id">
+                <input type="hidden" id="followup-rep-id">
+                <div class="form-group">
+                    <label>Lead Details</label>
+                    <div class="read-only-detail" id="followup-lead-name">--</div>
+                </div>
+                <div class="form-group">
+                    <label for="followup-date">Follow-up Date & Time *</label>
+                    <input type="datetime-local" id="followup-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="followup-next-date">Next Review Date (Optional)</label>
+                    <input type="datetime-local" id="followup-next-date">
+                </div>
+                <div class="form-group">
+                    <label for="followup-remarks">Action Plan / Remarks</label>
+                    <textarea id="followup-remarks" rows="3" placeholder="Explain the context of the call or email..." required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-schedule-followup')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Schedule Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- COMPLETE FOLLOW-UP MODAL -->
+    <div id="modal-complete-followup" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-calendar-check"></i> Complete Follow-Up</h3>
+                <button class="close-btn" onclick="closeModal('modal-complete-followup')">&times;</button>
+            </div>
+            <form id="complete-followup-form" onsubmit="submitCompleteFollowup(event)">
+                <input type="hidden" id="complete-followup-id">
+                <div class="form-group">
+                    <label for="complete-remarks">Outcome / Closing Remarks *</label>
+                    <textarea id="complete-remarks" rows="3" placeholder="Provide details on how the follow-up went..." required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-complete-followup')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Complete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ASSIGN REPRESENTATIVE MODAL -->
+    <div id="modal-assign-lead" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-tag"></i> Assign Lead Representative</h3>
+                <button class="close-btn" onclick="closeModal('modal-assign-lead')">&times;</button>
+            </div>
+            <form id="assign-lead-form" onsubmit="submitAssignLead(event)">
+                <input type="hidden" id="assign-lead-id">
+                <div class="form-group">
+                    <label>Lead Details</label>
+                    <div class="read-only-detail" id="assign-lead-name">--</div>
+                </div>
+                <div class="form-group">
+                    <label for="assign-rep-select">Assign to Sales Representative</label>
+                    <select id="assign-rep-select" required>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-assign-lead')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main JavaScript Logic -->
+    <script>
+        // Store all state data locally
+        let allLeads = [];
+        let representatives = [];
+        let departments = [];
+        let currentRole = "SalesRepresentative";
+
+        // Tab selection event handlers
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                
+                btn.classList.add('active');
+                const tabId = btn.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+                
+                // Update header titles based on selection
+                const titleMap = {
+                    'tab-dashboard': ['Dashboard Overview', 'Real-time statistics and lead pipeline overview'],
+                    'tab-leads': ['Leads Manager', 'Capture, update, and monitor prospective customers'],
+                    'tab-followups': ['Follow-up Schedule', 'Track calls, meetings, and upcoming actions'],
+                    'tab-customers': ['Customer Relations', 'Overview of successfully converted accounts'],
+                    'tab-logs': ['Database Logs', 'Auditing history logged automatically by database triggers']
+                };
+                document.getElementById('page-title').innerText = titleMap[tabId][0];
+                document.getElementById('page-subtitle').innerText = titleMap[tabId][1];
+
+                // Refresh tab-specific data
+                refreshTab(tabId);
+            });
+        });
+
+        // Lifecycle hooks
+        window.addEventListener('DOMContentLoaded', () => {
+            loadInitialData();
+            updateRolePermissions();
+        });
+
+        function loadInitialData() {
+            // Fetch sales representatives and departments
+            fetch('/api/reps')
+                .then(res => res.json())
+                .then(data => {
+                    representatives = data;
+                    populateRepDropdowns();
+                    // Load dashboard overview statistics
+                    refreshTab('tab-dashboard');
+                });
+
+            fetch('/api/departments')
+                .then(res => res.json())
+                .then(data => {
+                    departments = data;
+                });
+        }
+
+        function refreshTab(tabId) {
+            if (tabId === 'tab-dashboard') {
+                loadDashboardStats();
+            } else if (tabId === 'tab-leads') {
+                loadLeads();
+            } else if (tabId === 'tab-followups') {
+                loadFollowups();
+            } else if (tabId === 'tab-customers') {
+                loadCustomers();
+            } else if (tabId === 'tab-logs') {
+                loadLogs();
+            }
+        }
+
+        // --- DASHBOARD AND STATS ---
+        function loadDashboardStats() {
+            fetch('/api/analytics/overview')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('stat-total-leads').innerText = data.total_leads;
+                    document.getElementById('stat-open-leads').innerText = (data.by_status['Open'] || 0) + (data.by_status['Contacted'] || 0);
+                    document.getElementById('stat-converted-customers').innerText = data.total_customers;
+                    document.getElementById('stat-total-revenue').innerText = '₹' + parseFloat(data.total_revenue).toLocaleString('en-IN');
+                    
+                    // Render rep workloads
+                    const container = document.getElementById('workload-container');
+                    container.innerHTML = '';
+                    if (data.workload && data.workload.length > 0) {
+                        data.workload.forEach(item => {
+                            const percent = data.total_leads > 0 ? (item.lead_count / data.total_leads * 100).toFixed(0) : 0;
+                            const html = `
+                                <div class="workload-item">
+                                    <div class="workload-info">
+                                        <span class="rep-name">${item.name}</span>
+                                        <span class="lead-count">${item.lead_count} leads (${percent}%)</span>
+                                    </div>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: ${percent}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                            container.insertAdjacentHTML('beforeend', html);
+                        });
+                    } else {
+                        container.innerHTML = '<p class="empty-state">No representatives configured.</p>';
+                    }
+                });
+            
+            // Re-run the stored procedure default select
+            runRepStoredProcedure();
+        }
+
+        function runRepStoredProcedure() {
+            const repSelect = document.getElementById('sp-rep-select');
+            const repId = repSelect.value;
+            if (!repId) return;
+
+            fetch(`/api/analytics/rep/${repId}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('sp-total').innerText = data.total_leads;
+                    document.getElementById('sp-open').innerText = data.open_leads;
+                    document.getElementById('sp-converted').innerText = data.converted_leads;
+                });
+        }
+
+        // --- ROLE BASED SIMULATION ---
+        function updateRolePermissions() {
+            currentRole = document.getElementById('role-select').value;
+            showToast(`Switched active role view to: ${currentRole}`);
+            
+            // Re-render leads table to hide/disable actions based on role permissions
+            if (document.getElementById('tab-leads').classList.contains('active')) {
+                renderLeads(allLeads);
+            }
+        }
+
+        function checkPermission(action) {
+            if (currentRole === 'Administrator') return true;
+            
+            if (currentRole === 'SalesManager') {
+                // Sales Manager cannot delete leads
+                if (action === 'delete-lead') return false;
+                return true;
+            }
+            
+            if (currentRole === 'SalesRepresentative') {
+                // Reps cannot assign leads or delete leads
+                if (action === 'assign-lead' || action === 'delete-lead') return false;
+                return true;
+            }
+            return false;
+        }
+
+        // --- LEADS MANAGEMENT ---
+        function loadLeads() {
+            fetch('/api/leads')
+                .then(res => res.json())
+                .then(data => {
+                    allLeads = data;
+                    renderLeads(data);
+                });
+        }
+
+        function renderLeads(leadsList) {
+            const tbody = document.getElementById('leads-table-body');
+            tbody.innerHTML = '';
+            
+            if (leadsList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center empty-state">No leads found. Create a new lead to start.</td></tr>';
+                return;
+            }
+
+            leadsList.forEach(lead => {
+                const badgeClass = {
+                    'Open': 'badge-info',
+                    'Contacted': 'badge-warning',
+                    'Converted': 'badge-success',
+                    'Lost': 'badge-danger'
+                }[lead.status] || 'badge-secondary';
+
+                const repText = lead.rep_name ? `<span class="rep-chip"><i class="fa-solid fa-user-tie"></i> ${lead.rep_name}</span>` : '<span class="text-muted">Unassigned</span>';
+                
+                // Formulate actions dropdown/buttons
+                const canAssign = checkPermission('assign-lead');
+                const canDelete = checkPermission('delete-lead');
+                
+                const formatDatetime = (dtStr) => {
+                    if (!dtStr) return '--';
+                    const d = new Date(dtStr);
+                    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                };
+
+                const actionButtons = `
+                    <div class="action-btn-group">
+                        <button class="btn btn-icon btn-blue-outline" onclick="openEditLeadModal(${lead.lead_id})" title="Edit details">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        ${lead.status !== 'Converted' ? `
+                            <button class="btn btn-icon btn-green-outline" onclick="openConvertLeadModal(${lead.lead_id}, '${lead.first_name} ${lead.last_name}')" title="Convert to customer">
+                                <i class="fa-solid fa-handshake"></i>
+                            </button>
+                        ` : ''}
+                        ${lead.assigned_to ? `
+                            <button class="btn btn-icon btn-amber-outline" onclick="openScheduleFollowupModal(${lead.lead_id}, ${lead.assigned_to}, '${lead.first_name} ${lead.last_name}')" title="Schedule Follow-up">
+                                <i class="fa-solid fa-calendar-plus"></i>
+                            </button>
+                        ` : ''}
+                        ${canAssign ? `
+                            <button class="btn btn-icon btn-purple-outline" onclick="openAssignLeadModal(${lead.lead_id}, '${lead.first_name} ${lead.last_name}')" title="Assign Rep">
+                                <i class="fa-solid fa-user-tag"></i>
+                            </button>
+                        ` : ''}
+                        ${canDelete ? `
+                            <button class="btn btn-icon btn-red-outline" onclick="deleteLead(${lead.lead_id})" title="Delete Lead">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                const tr = `
+                    <tr>
+                        <td>
+                            <div class="lead-name-block">
+                                <span class="name">${lead.first_name} ${lead.last_name}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="contact-details">
+                                <span><i class="fa-regular fa-envelope"></i> ${lead.email || 'N/A'}</span>
+                                <span><i class="fa-solid fa-phone-flip"></i> ${lead.phone || 'N/A'}</span>
+                            </div>
+                        </td>
+                        <td>${lead.source || 'Website'}</td>
+                        <td><span class="badge ${badgeClass}">${lead.status}</span></td>
+                        <td>${repText}</td>
+                        <td class="text-muted text-sm">${formatDatetime(lead.created_at)}</td>
+                        <td class="text-right">${actionButtons}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', tr);
+            });
+        }
+
+        function filterLeads() {
+            const query = document.getElementById('lead-search').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const sourceFilter = document.getElementById('filter-source').value;
+            
+            const filtered = allLeads.filter(lead => {
+                const nameMatch = `${lead.first_name} ${lead.last_name}`.toLowerCase().includes(query) ||
+                                  (lead.email && lead.email.toLowerCase().includes(query)) ||
+                                  (lead.phone && lead.phone.includes(query));
+                
+                const statusMatch = !statusFilter || lead.status === statusFilter;
+                const sourceMatch = !sourceFilter || lead.source === sourceFilter;
+                
+                return nameMatch && statusMatch && sourceMatch;
+            });
+            renderLeads(filtered);
+        }
+
+        function deleteLead(id) {
+            if (!confirm("Are you sure you want to delete this lead? This action cannot be undone.")) return;
+            
+            fetch(`/api/leads/${id}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        showToast(`Error: ${data.error}`, 'error');
+                    } else {
+                        showToast("Lead successfully deleted.");
+                        loadLeads();
+                    }
+                });
+        }
+
+        // --- FOLLOW UPS ---
+        function loadFollowups() {
+            fetch('/api/followups')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('followups-table-body');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center empty-state">No follow-ups scheduled yet.</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const isScheduled = item.status === 'Scheduled';
+                        const badgeClass = isScheduled ? 'badge-warning' : 'badge-success';
+                        
+                        const actionHtml = isScheduled ? `
+                            <button class="btn btn-sm btn-success" onclick="openCompleteFollowupModal(${item.followup_id})">
+                                <i class="fa-solid fa-check"></i> Complete
+                            </button>
+                        ` : '<span class="text-muted text-sm"><i class="fa-solid fa-check-double text-success"></i> Checked</span>';
+
+                        const formatDatetime = (dtStr) => {
+                            if (!dtStr) return '--';
+                            const d = new Date(dtStr);
+                            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        };
+
+                        const tr = `
+                            <tr>
+                                <td><strong>${item.first_name} ${item.last_name}</strong></td>
+                                <td><span class="rep-chip"><i class="fa-solid fa-user-tie"></i> ${item.rep_name || 'N/A'}</span></td>
+                                <td class="text-muted">${formatDatetime(item.followup_date)}</td>
+                                <td><p class="remarks-cell">${item.remarks || '--'}</p></td>
+                                <td class="text-muted">${formatDatetime(item.next_followup_date)}</td>
+                                <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                                <td class="text-right">${actionHtml}</td>
+                            </tr>
+                        `;
+                        tbody.insertAdjacentHTML('beforeend', tr);
+                    });
+                });
+        }
+
+        // --- CUSTOMERS ---
+        function loadCustomers() {
+            fetch('/api/customers')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('customers-table-body');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state">No converted customers yet.</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(cust => {
+                        const dateStr = new Date(cust.conversion_date).toLocaleDateString();
+                        const tr = `
+                            <tr>
+                                <td>
+                                    <div class="lead-name-block">
+                                        <span class="name">${cust.first_name} ${cust.last_name}</span>
+                                        <span class="subtext">${cust.email}</span>
+                                    </div>
+                                </td>
+                                <td><strong>${cust.company_name}</strong></td>
+                                <td>${cust.address}</td>
+                                <td><span class="rep-chip"><i class="fa-solid fa-user-tie"></i> ${cust.rep_name || 'N/A'}</span></td>
+                                <td class="text-muted">${dateStr}</td>
+                                <td><strong class="text-success">₹${parseFloat(cust.total_value).toLocaleString('en-IN')}</strong></td>
+                            </tr>
+                        `;
+                        tbody.insertAdjacentHTML('beforeend', tr);
+                    });
+                });
+        }
+
+        // --- AUDIT TIMELINE LOGS ---
+        function loadLogs() {
+            fetch('/api/logs')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('log-timeline');
+                    container.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        container.innerHTML = '<p class="empty-state">No database log entries available.</p>';
+                        return;
+                    }
+
+                    data.forEach(log => {
+                        const date = new Date(log.action_date);
+                        const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                        
+                        let iconClass = "fa-solid fa-info-circle";
+                        let colorClass = "log-accent-blue";
+                        
+                        if (log.action === 'Lead Created') {
+                            iconClass = "fa-solid fa-plus-circle";
+                            colorClass = "log-accent-green";
+                        } else if (log.action === 'Lead Assigned') {
+                            iconClass = "fa-solid fa-user-tag";
+                            colorClass = "log-accent-purple";
+                        } else if (log.action === 'Lead Converted') {
+                            iconClass = "fa-solid fa-trophy";
+                            colorClass = "log-accent-gold";
+                        } else if (log.action === 'Follow-up Scheduled') {
+                            iconClass = "fa-solid fa-calendar-plus";
+                            colorClass = "log-accent-orange";
+                        } else if (log.action === 'Follow-up Completed') {
+                            iconClass = "fa-solid fa-calendar-check";
+                            colorClass = "log-accent-emerald";
+                        }
+
+                        const html = `
+                            <div class="log-item">
+                                <div class="log-badge ${colorClass}">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div class="log-body">
+                                    <div class="log-header">
+                                        <span class="log-title">${log.action}</span>
+                                        <span class="log-time">${timeStr}</span>
+                                    </div>
+                                    <p class="log-desc">${log.description}</p>
+                                    <div class="log-meta">
+                                        ${log.first_name ? `<span><i class="fa-regular fa-user"></i> Lead: ${log.first_name} ${log.last_name}</span>` : ''}
+                                        ${log.rep_name ? `<span><i class="fa-solid fa-user-tie"></i> Exec: ${log.rep_name}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.insertAdjacentHTML('beforeend', html);
+                    });
+                });
+        }
+
+        // --- DROPDOWN POPULATION ---
+        function populateRepDropdowns() {
+            // Selects to populate
+            const spSelect = document.getElementById('sp-rep-select');
+            const addAssigned = document.getElementById('add-assigned');
+            const editAssigned = document.getElementById('edit-assigned');
+            const assignRep = document.getElementById('assign-rep-select');
+            
+            spSelect.innerHTML = '';
+            addAssigned.innerHTML = '<option value="">Leave Unassigned</option>';
+            editAssigned.innerHTML = '<option value="">Leave Unassigned</option>';
+            assignRep.innerHTML = '<option value="" disabled selected>Choose a Sales Representative...</option>';
+
+            representatives.forEach(rep => {
+                const opt = `<option value="${rep.rep_id}">${rep.name} (${rep.dept_name})</option>`;
+                spSelect.insertAdjacentHTML('beforeend', opt);
+                addAssigned.insertAdjacentHTML('beforeend', opt);
+                editAssigned.insertAdjacentHTML('beforeend', opt);
+                assignRep.insertAdjacentHTML('beforeend', opt);
+            });
+        }
+
+        // --- MODAL UTILITIES ---
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function openEditLeadModal(id) {
+            fetch(`/api/leads/${id}`)
+                .then(res => res.json())
+                .then(lead => {
+                    document.getElementById('edit-lead-id').value = lead.lead_id;
+                    document.getElementById('edit-first-name').value = lead.first_name;
+                    document.getElementById('edit-last-name').value = lead.last_name;
+                    document.getElementById('edit-email').value = lead.email || '';
+                    document.getElementById('edit-phone').value = lead.phone || '';
+                    document.getElementById('edit-source').value = lead.source || 'Website';
+                    document.getElementById('edit-status').value = lead.status || 'Open';
+                    document.getElementById('edit-assigned').value = lead.assigned_to || '';
+                    openModal('modal-edit-lead');
+                });
+        }
+
+        function openAssignLeadModal(id, name) {
+            document.getElementById('assign-lead-id').value = id;
+            document.getElementById('assign-lead-name').innerText = name;
+            openModal('modal-assign-lead');
+        }
+
+        function openConvertLeadModal(id, name) {
+            document.getElementById('convert-lead-id').value = id;
+            document.getElementById('convert-lead-name').innerText = name;
+            document.getElementById('convert-company').value = '';
+            document.getElementById('convert-address').value = '';
+            document.getElementById('convert-value').value = '';
+            openModal('modal-convert-lead');
+        }
+
+        function openScheduleFollowupModal(leadId, repId, leadName) {
+            document.getElementById('followup-lead-id').value = leadId;
+            document.getElementById('followup-rep-id').value = repId;
+            document.getElementById('followup-lead-name').innerText = leadName;
+            document.getElementById('followup-date').value = '';
+            document.getElementById('followup-next-date').value = '';
+            document.getElementById('followup-remarks').value = '';
+            openModal('modal-schedule-followup');
+        }
+
+        function openCompleteFollowupModal(id) {
+            document.getElementById('complete-followup-id').value = id;
+            document.getElementById('complete-remarks').value = '';
+            openModal('modal-complete-followup');
+        }
+
+        // --- SUBMIT OPERATIONS ---
+        function submitAddLead(e) {
+            e.preventDefault();
+            const payload = {
+                first_name: document.getElementById('add-first-name').value,
+                last_name: document.getElementById('add-last-name').value,
+                email: document.getElementById('add-email').value,
+                phone: document.getElementById('add-phone').value,
+                source: document.getElementById('add-source').value,
+                assigned_to: document.getElementById('add-assigned').value
+            };
+
+            fetch('/api/leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(`Error: ${data.error}`, 'error');
+                } else {
+                    closeModal('modal-add-lead');
+                    document.getElementById('add-lead-form').reset();
+                    showToast("New lead added successfully. Database trigger executed!");
+                    loadLeads();
+                }
+            });
+        }
+
+        function submitEditLead(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-lead-id').value;
+            const payload = {
+                first_name: document.getElementById('edit-first-name').value,
+                last_name: document.getElementById('edit-last-name').value,
+                email: document.getElementById('edit-email').value,
+                phone: document.getElementById('edit-phone').value,
+                source: document.getElementById('edit-source').value,
+                status: document.getElementById('edit-status').value,
+                assigned_to: document.getElementById('edit-assigned').value
+            };
+
+            fetch(`/api/leads/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(`Error: ${data.error}`, 'error');
+                } else {
+                    closeModal('modal-edit-lead');
+                    showToast("Lead updated successfully.");
+                    loadLeads();
+                }
+            });
+        }
+
+        function submitAssignLead(e) {
+            e.preventDefault();
+            const payload = {
+                lead_id: document.getElementById('assign-lead-id').value,
+                rep_id: document.getElementById('assign-rep-select').value
+            };
+
+            fetch('/api/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(`Error: ${data.error}`, 'error');
+                } else {
+                    closeModal('modal-assign-lead');
+                    showToast(data.message || "Lead successfully assigned.");
+                    loadLeads();
+                }
+            });
+        }
+
+        function submitConvertLead(e) {
+            e.preventDefault();
+            const payload = {
+                lead_id: document.getElementById('convert-lead-id').value,
+                company_name: document.getElementById('convert-company').value,
+                address: document.getElementById('convert-address').value,
+                total_value: parseFloat(document.getElementById('convert-value').value)
+            };
+
+            fetch('/api/customers/convert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(`Error: ${data.error}`, 'error');
+                } else {
+                    closeModal('modal-convert-lead');
+                    showToast(data.message || "Lead successfully converted to Customer!");
+                    loadLeads();
+                }
+            });
+        }
+
+        function submitScheduleFollowup(e) {
+            e.preventDefault();
+            const payload = {
+                lead_id: document.getElementById('followup-lead-id').value,
+                rep_id: document.getElementById('followup-rep-id').value,
+                followup_date: document.getElementById('followup-date').value.replace('T', ' '),
+                remarks: document.getElementById('followup-remarks').value,
+                next_followup_date: document.getElementById('followup-next-date').value ? document.getElementById('followup-next-date').value.replace('T', ' ') : null
+            };
+
+            fetch('/api/followups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(`Error: ${data.error}`, 'error');
+                } else {
+                    closeModal('modal-schedule-followup');
+                    showToast("Follow-up successfully scheduled.");
+                    loadLeads();
+                }
+            });
+        }
+
+        function submitCompleteFollowup(e) {
+            e.preventDefault();
+            const id = document.getElementById('complete-followup-id').value;
+            const remarks = document.getElementById('complete-remarks').value;
+
+            fetch(`/api/followups/${id}/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ remarks: remarks })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(`Error: ${data.error}`, 'error');
+                } else {
+                    closeModal('modal-complete-followup');
+                    showToast("Follow-up completed successfully!");
+                    loadFollowups();
+                }
+            });
+        }
+
+        // --- TOAST UTILITY ---
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = toast.querySelector('.toast-icon');
+            
+            toastMsg.innerText = message;
+            toast.className = 'toast show';
+            
+            if (type === 'error') {
+                toast.classList.add('toast-error');
+                toastIcon.className = 'fa-solid fa-circle-xmark toast-icon';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check toast-icon';
+            }
+            
+            setTimeout(() => {
+                toast.className = 'toast hidden';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
