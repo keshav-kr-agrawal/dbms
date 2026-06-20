@@ -1,0 +1,788 @@
+================================================================================
+                    LEAD MANAGEMENT SYSTEM (LMS)
+                         COMPLETE PROJECT DOCUMENTATION
+================================================================================
+
+Institution   : Bangalore Institute of Technology (BIT)
+Department    : Computer Science and Engineering (CS&E)
+Academic Year : 2025–2026
+Project Type  : DBMS Mini Project
+Lab In-Charges: Prof. PRATHIMA M G, Prof. MANJUSHREE N S
+Submission    : 18/05/2026
+
+Team Members:
+  USN          | Name              | Batch | Phone      | Email
+  -------------|-------------------|-------|------------|----------------------------------
+  1BI24CS073   | Harshiya Mahajan  | B1    | 7006637508 | harshiyamahajan2006@gmail.com
+  1BI24CS080   | Ishaan Gupta      | B1    | 9670333459 | ishaangupta011205@gmail.com
+  1BI24CS100   | Keshav Kr Agrawal | B2    | 9263225604 | agravalkeshav002@gmail.com
+
+
+================================================================================
+1. INTRODUCTION
+================================================================================
+
+In today's highly competitive business environment, effectively managing leads is
+crucial for the growth and sustainability of any organization. A Lead Management
+System (LMS) is a software application designed to capture, track, organize, and
+nurture potential customers — called leads — through the sales pipeline from first
+contact to conversion.
+
+Traditional methods of managing leads using spreadsheets, paper records, or disparate
+tools are error-prone, time-consuming, and lack real-time visibility. A centralized,
+database-driven Lead Management System addresses these challenges by automating the
+tracking and follow-up process, assigning leads to appropriate sales agents, and
+generating meaningful analytics to improve decision-making.
+
+This project implements a fully functional Lead Management System using:
+  - Python Flask as the web application server (front-end presentation layer)
+  - HTML, CSS, and JavaScript as the client-side UI
+  - SQLite (default) or MySQL as the relational database back-end
+
+The system provides role-based access simulation for Administrators, Sales Managers,
+and Sales Representatives, enabling efficient collaboration and complete lead lifecycle
+management with database triggers, stored procedures, and audit trails.
+
+
+================================================================================
+2. PROBLEM STATEMENT
+================================================================================
+
+Organizations often struggle with managing large volumes of leads from multiple
+sources such as websites, social media, email campaigns, and walk-in inquiries.
+The key challenges include:
+
+  1. Lack of a centralized system to capture and store lead information from
+     multiple sources.
+
+  2. Difficulty in tracking the status and history of each lead across the sales
+     funnel (Open → Contacted → Converted / Lost).
+
+  3. Inability to assign and reassign leads to appropriate sales representatives
+     efficiently.
+
+  4. No mechanism to set follow-up reminders or track overdue follow-up activities.
+
+  5. Absence of reporting and analytics tools to assess team performance and lead
+     conversion rates.
+
+  6. Risk of data duplication, data loss, and lack of accountability without a
+     proper database-driven system with audit logging.
+
+The proposed Lead Management System aims to solve all the above problems by providing
+a centralized, secure, and scalable platform that manages the complete lifecycle of
+a lead — from generation to closure — with proper audit trails and performance metrics.
+
+
+================================================================================
+3. SOLUTION OVERVIEW
+================================================================================
+
+The Lead Management System provides a web-based dashboard where users can:
+
+  - Capture new leads with contact details, source, and initial status
+  - View, edit, update, and delete lead records (role-dependent)
+  - Assign or reassign leads to sales representatives
+  - Schedule and complete follow-up activities (calls, demos, emails)
+  - Convert qualified leads into customers with company and revenue details
+  - View real-time analytics dashboards (total leads, revenue, workload distribution)
+  - Run stored procedure analytics per sales representative
+  - Maintain a complete activity log (audit trail) for accountability
+
+Key DBMS features demonstrated:
+  - Relational schema with primary keys and foreign key constraints
+  - One-to-many and one-to-one relationships
+  - Database TRIGGER for automatic audit logging on lead creation
+  - STORED PROCEDURE for representative performance analytics
+  - Referential integrity with ON DELETE CASCADE / SET NULL rules
+  - Dual database support (SQLite for development, MySQL for submission)
+
+
+================================================================================
+4. TECH STACK
+================================================================================
+
+LAYER              | TECHNOLOGY                    | PURPOSE
+-------------------|-------------------------------|----------------------------------
+Front-End UI       | HTML5, CSS3, JavaScript       | Single Page Application dashboard
+Front-End Styling  | Custom CSS (Inter/Outfit fonts)| Modern responsive UI design
+Icons & Fonts      | Font Awesome 6, Google Fonts  | UI icons and typography
+Web Server         | Python 3 + Flask              | HTTP server, REST API, routing
+Template Engine    | Jinja2 (Flask built-in)       | Serves index.html
+Database (Default) | SQLite 3                      | Zero-config local database (lms.db)
+Database (Submit)  | MySQL 8.x                     | Production RDBMS for grading
+DB Connector       | sqlite3 (stdlib)              | SQLite connectivity
+DB Connector       | mysql-connector-python        | MySQL connectivity
+Configuration      | config.py                     | DB type toggle and credentials
+Schema Definition  | schema_sqlite.sql             | SQLite DDL, triggers
+Schema Definition  | schema_mysql.sql              | MySQL DDL, procedures, triggers
+Data Access Layer  | database.py                   | Connection pooling, query execution
+API Layer          | app.py                        | RESTful JSON endpoints
+
+
+================================================================================
+5. ENTITY-RELATIONSHIP (ER) DIAGRAM
+================================================================================
+
+The ER model consists of 6 entities and their relationships:
+
+ENTITIES:
+---------
+
+  DEPARTMENT
+    Attributes: dept_id (PK), dept_name, dept_head, location
+    Description: Organizational unit that groups sales representatives
+
+  SALES_REPRESENTATIVE
+    Attributes: rep_id (PK), name, email, phone, designation, dept_id (FK)
+    Description: Sales team member who manages and follows up on leads
+
+  LEAD
+    Attributes: lead_id (PK), first_name, last_name, email, phone, source,
+               status, assigned_to (FK), created_at, updated_at
+    Description: Central entity — a prospective customer in the sales pipeline
+
+  CUSTOMER
+    Attributes: customer_id (PK), lead_id (FK, UNIQUE), company_name, address,
+               conversion_date, total_value
+    Description: A lead that has been successfully converted to a paying customer
+
+  FOLLOW_UP
+    Attributes: followup_id (PK), lead_id (FK), rep_id (FK), followup_date,
+               remarks, next_followup_date, status
+    Description: Scheduled or completed follow-up activity on a lead
+
+  ACTIVITY_LOG
+    Attributes: log_id (PK), lead_id (FK), rep_id (FK), action, action_date,
+               description
+    Description: Audit trail recording all significant actions on leads
+
+
+RELATIONSHIPS:
+--------------
+
+  DEPARTMENT ──(1:N)──► SALES_REPRESENTATIVE
+    One department has many sales representatives.
+    Each representative belongs to one department (optional).
+
+  SALES_REPRESENTATIVE ──(1:N)──► LEAD
+    One representative can be assigned many leads.
+    Each lead is assigned to at most one representative.
+
+  LEAD ──(1:1)──► CUSTOMER
+    A lead can convert to exactly one customer record.
+    Each customer record maps to exactly one lead (enforced by UNIQUE on lead_id).
+
+  LEAD ──(1:N)──► FOLLOW_UP
+    One lead can have many follow-up records.
+    Each follow-up belongs to one lead.
+
+  SALES_REPRESENTATIVE ──(1:N)──► FOLLOW_UP
+    One representative can perform many follow-ups.
+    Each follow-up is associated with one representative.
+
+  LEAD ──(1:N)──► ACTIVITY_LOG
+    One lead can have many activity log entries.
+
+  SALES_REPRESENTATIVE ──(1:N)──► ACTIVITY_LOG
+    One representative can appear in many log entries.
+
+
+ER DIAGRAM (TEXT REPRESENTATION):
+---------------------------------
+
+    ┌──────────────┐         ┌─────────────────────┐
+    │  DEPARTMENT  │ 1     N │ SALES_REPRESENTATIVE│
+    │──────────────│◄────────│─────────────────────│
+    │ PK dept_id   │         │ PK rep_id           │
+    │    dept_name │         │    name, email      │
+    │    dept_head │         │    phone, designation│
+    │    location  │         │ FK dept_id          │
+    └──────────────┘         └──────────┬──────────┘
+                                        │ 1
+                                        │
+                          ┌─────────────┼─────────────┐
+                          │ N           │ N           │ N
+                          ▼             ▼             ▼
+               ┌──────────────┐  ┌───────────┐  ┌─────────────┐
+               │    LEAD      │  │ FOLLOW_UP │  │ ACTIVITY_LOG│
+               │──────────────│  │───────────│  │─────────────│
+               │ PK lead_id   │  │PK followup│  │ PK log_id   │
+               │    first_name│  │FK lead_id │  │ FK lead_id  │
+               │    last_name │  │FK rep_id  │  │ FK rep_id   │
+               │    email     │  │ followup_ │  │ action      │
+               │    phone     │  │   date    │  │ action_date │
+               │    source    │  │ remarks   │  │ description │
+               │    status    │  │ next_foll │  └─────────────┘
+               │ FK assigned_ │  │ status    │
+               │    to        │  └───────────┘
+               │ created_at   │
+               │ updated_at   │
+               └──────┬───────┘
+                      │ 1
+                      │
+                      │ 1
+                      ▼
+               ┌──────────────┐
+               │   CUSTOMER   │
+               │──────────────│
+               │ PK customer_ │
+               │      id      │
+               │ FK lead_id   │ (UNIQUE — 1:1)
+               │ company_name │
+               │ address      │
+               │ conversion_  │
+               │   date       │
+               │ total_value  │
+               └──────────────┘
+
+
+================================================================================
+6. ER TO RELATIONAL MAPPING
+================================================================================
+
+Mapping rules applied to convert the ER diagram into relational tables:
+
+RULE 1 — Strong Entity → Table
+  Each strong entity (Department, Sales_Representative, Lead, Customer,
+  Follow_Up, Activity_Log) is mapped to its own relation with its primary key.
+
+RULE 2 — One-to-Many (1:N) → Foreign Key on "Many" Side
+  Relationship                  | FK Placement
+  ----------------------------|------------------------------------------
+  Department → Sales_Rep      | dept_id FK in sales_representatives
+  Sales_Rep → Lead            | assigned_to FK in leads
+  Lead → Follow_Up            | lead_id FK in follow_ups
+  Sales_Rep → Follow_Up       | rep_id FK in follow_ups
+  Lead → Activity_Log         | lead_id FK in activity_log
+  Sales_Rep → Activity_Log    | rep_id FK in activity_log
+
+RULE 3 — One-to-One (1:1) → FK in One Table with UNIQUE Constraint
+  Lead ↔ Customer: lead_id is placed as a FOREIGN KEY in the customers table
+  with a UNIQUE constraint, ensuring each lead maps to at most one customer.
+
+RESULTING RELATIONAL SCHEMA:
+  departments(dept_id, dept_name, dept_head, location)
+  sales_representatives(rep_id, name, email, phone, designation, dept_id)
+  leads(lead_id, first_name, last_name, email, phone, source, status,
+        assigned_to, created_at, updated_at)
+  customers(customer_id, lead_id, company_name, address, conversion_date, total_value)
+  follow_ups(followup_id, lead_id, rep_id, followup_date, remarks,
+             next_followup_date, status)
+  activity_log(log_id, lead_id, rep_id, action, action_date, description)
+
+
+================================================================================
+7. NORMALIZATION
+================================================================================
+
+The database schema is designed to satisfy Third Normal Form (3NF) and BCNF.
+
+────────────────────────────────────────────────────────────────────────────────
+7.1 FIRST NORMAL FORM (1NF)
+────────────────────────────────────────────────────────────────────────────────
+Requirement: All attributes must contain atomic (indivisible) values; no repeating
+groups or multi-valued attributes.
+
+Satisfaction:
+  - All columns store single atomic values (e.g., first_name and last_name are
+    separate columns, not a combined "full_name" array).
+  - No repeating groups (e.g., multiple phone numbers are not stored in one cell).
+  - Each table has a defined primary key.
+  ✓ Schema is in 1NF.
+
+────────────────────────────────────────────────────────────────────────────────
+7.2 SECOND NORMAL FORM (2NF)
+────────────────────────────────────────────────────────────────────────────────
+Requirement: Must be in 1NF AND no partial dependency on a composite primary key.
+
+Satisfaction:
+  - All tables use a single-column surrogate primary key (dept_id, rep_id, lead_id,
+    customer_id, followup_id, log_id).
+  - Since there are no composite primary keys, partial dependencies cannot exist.
+  ✓ Schema is in 2NF.
+
+────────────────────────────────────────────────────────────────────────────────
+7.3 THIRD NORMAL FORM (3NF)
+────────────────────────────────────────────────────────────────────────────────
+Requirement: Must be in 2NF AND no transitive dependency (non-key attribute
+depending on another non-key attribute).
+
+Analysis per table:
+
+  departments:
+    - dept_name, dept_head, location depend only on dept_id (PK).
+    ✓ No transitive dependencies.
+
+  sales_representatives:
+    - name, email, phone, designation depend on rep_id (PK).
+    - dept_id is a foreign key referencing departments — department details
+      (dept_name, dept_head, location) are NOT duplicated here.
+    ✓ No transitive dependencies.
+
+  leads:
+    - Lead attributes depend on lead_id (PK).
+    - assigned_to is FK to sales_representatives — rep details are not stored
+      redundantly in the leads table.
+    ✓ No transitive dependencies.
+
+  customers:
+    - company_name, address, conversion_date, total_value depend on customer_id.
+    - lead_id is FK — lead personal details are not duplicated.
+    ✓ No transitive dependencies.
+
+  follow_ups:
+    - All attributes depend on followup_id (PK).
+    - lead_id and rep_id are foreign keys only.
+    ✓ No transitive dependencies.
+
+  activity_log:
+    - action, action_date, description depend on log_id (PK).
+    - lead_id and rep_id are foreign keys only.
+    ✓ No transitive dependencies.
+
+  ✓ Schema is in 3NF.
+
+────────────────────────────────────────────────────────────────────────────────
+7.4 BOYCE-CODD NORMAL FORM (BCNF)
+────────────────────────────────────────────────────────────────────────────────
+Requirement: For every functional dependency X → Y, X must be a superkey.
+
+  - All functional dependencies in every table have the primary key on the
+    left-hand side.
+  - No anomalies from non-superkey determinants exist.
+  ✓ Schema is in BCNF.
+
+────────────────────────────────────────────────────────────────────────────────
+7.5 DESIGN DECISIONS (Denormalization Avoided)
+────────────────────────────────────────────────────────────────────────────────
+  - Department info is NOT stored in sales_representatives (only dept_id FK).
+  - Representative name is NOT stored in leads (only assigned_to FK).
+  - Lead personal info is NOT duplicated in customers (only lead_id FK).
+  - Activity descriptions are stored in activity_log, not embedded in leads.
+
+This eliminates update anomalies, insertion anomalies, and deletion anomalies.
+
+
+================================================================================
+8. DATABASE SCHEMA — TABLE DETAILS
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+8.1 departments
+────────────────────────────────────────────────────────────────────────────────
+Column     | Type         | Constraints
+-----------|--------------|--------------------------------------------------
+dept_id    | INTEGER/INT  | PRIMARY KEY, AUTO_INCREMENT
+dept_name  | TEXT/VARCHAR | NOT NULL
+dept_head  | TEXT/VARCHAR | NULLABLE
+location   | TEXT/VARCHAR | NULLABLE
+
+Sample Data:
+  1 | Sales & Marketing  | Prof. PRATHIMA M G    | Block A, 3rd Floor
+  2 | Enterprise Sales   | Prof. MANJUSHREE N S  | Block A, 4th Floor
+  3 | Customer Success   | Dr. Ramesh Kumar      | Block B, 2nd Floor
+
+────────────────────────────────────────────────────────────────────────────────
+8.2 sales_representatives
+────────────────────────────────────────────────────────────────────────────────
+Column      | Type         | Constraints
+------------|--------------|--------------------------------------------------
+rep_id      | INTEGER/INT  | PRIMARY KEY, AUTO_INCREMENT
+name        | TEXT/VARCHAR | NOT NULL
+email       | TEXT/VARCHAR | UNIQUE, NOT NULL
+phone       | TEXT/VARCHAR | NULLABLE
+designation | TEXT/VARCHAR | NULLABLE
+dept_id     | INTEGER/INT  | FOREIGN KEY → departments(dept_id) ON DELETE SET NULL
+
+Sample Data:
+  1 | Harshiya Mahajan  | harshiyamahajan2006@gmail.com | 7006637508 | Sales Exec    | 1
+  2 | Ishaan Gupta      | ishaangupta011205@gmail.com   | 9670333459 | Sales Manager | 2
+  3 | Keshav Kr Agrawal | agravalkeshav002@gmail.com    | 9263225604 | VP of Sales   | 2
+
+────────────────────────────────────────────────────────────────────────────────
+8.3 leads
+────────────────────────────────────────────────────────────────────────────────
+Column      | Type         | Constraints
+------------|--------------|--------------------------------------------------
+lead_id     | INTEGER/INT  | PRIMARY KEY, AUTO_INCREMENT
+first_name  | TEXT/VARCHAR | NOT NULL
+last_name   | TEXT/VARCHAR | NOT NULL
+email       | TEXT/VARCHAR | NULLABLE
+phone       | TEXT/VARCHAR | NULLABLE
+source      | TEXT/VARCHAR | NULLABLE (Website, Social Media, Email Campaign, Walk-in)
+status      | TEXT/VARCHAR | DEFAULT 'Open' (Open, Contacted, Converted, Lost)
+assigned_to | INTEGER/INT  | FOREIGN KEY → sales_representatives(rep_id) ON DELETE SET NULL
+created_at  | DATETIME     | DEFAULT CURRENT_TIMESTAMP
+updated_at  | DATETIME     | DEFAULT CURRENT_TIMESTAMP
+
+Sample Data:
+  1 | Amit   | Sharma | amit.sharma@example.com   | 9876543210 | Website        | Open      | 1
+  2 | Priya  | Patel  | priya.patel@example.com   | 9812345678 | Social Media   | Contacted | 1
+  3 | Rajesh | Verma  | rajesh.verma@example.com  | 9988776655 | Email Campaign | Converted | 2
+  4 | Sneha  | Reddy  | sneha.reddy@example.com   | 9765432109 | Walk-in        | Open      | 3
+  5 | Vikram | Singh  | vikram.singh@example.com  | 9555123456 | Website        | Lost      | 2
+
+────────────────────────────────────────────────────────────────────────────────
+8.4 customers
+────────────────────────────────────────────────────────────────────────────────
+Column          | Type          | Constraints
+----------------|---------------|--------------------------------------------------
+customer_id     | INTEGER/INT   | PRIMARY KEY, AUTO_INCREMENT
+lead_id         | INTEGER/INT   | UNIQUE, NOT NULL, FK → leads(lead_id) ON DELETE CASCADE
+company_name    | TEXT/VARCHAR  | NULLABLE
+address         | TEXT/VARCHAR  | NULLABLE
+conversion_date | DATETIME      | DEFAULT CURRENT_TIMESTAMP
+total_value     | REAL/DECIMAL  | DEFAULT 0.00
+
+Sample Data:
+  1 | 3 | Verma Tech Solutions | 123, MG Road, Bengaluru | 250000.00
+
+────────────────────────────────────────────────────────────────────────────────
+8.5 follow_ups
+────────────────────────────────────────────────────────────────────────────────
+Column             | Type         | Constraints
+-------------------|--------------|--------------------------------------------------
+followup_id        | INTEGER/INT  | PRIMARY KEY, AUTO_INCREMENT
+lead_id            | INTEGER/INT  | NOT NULL, FK → leads(lead_id) ON DELETE CASCADE
+rep_id             | INTEGER/INT  | FK → sales_representatives(rep_id) ON DELETE SET NULL
+followup_date      | DATETIME     | NOT NULL
+remarks            | TEXT         | NULLABLE
+next_followup_date | DATETIME     | NULLABLE
+status             | TEXT/VARCHAR | DEFAULT 'Scheduled' (Scheduled, Completed, Missed)
+
+────────────────────────────────────────────────────────────────────────────────
+8.6 activity_log
+────────────────────────────────────────────────────────────────────────────────
+Column      | Type         | Constraints
+------------|--------------|--------------------------------------------------
+log_id      | INTEGER/INT  | PRIMARY KEY, AUTO_INCREMENT
+lead_id     | INTEGER/INT  | FK → leads(lead_id) ON DELETE SET NULL
+rep_id      | INTEGER/INT  | FK → sales_representatives(rep_id) ON DELETE SET NULL
+action      | TEXT/VARCHAR | NOT NULL
+action_date | DATETIME     | DEFAULT CURRENT_TIMESTAMP
+description | TEXT         | NULLABLE
+
+Action Types Logged:
+  - Lead Created (via database trigger)
+  - Lead Assigned
+  - Lead Reassigned
+  - Status Updated
+  - Follow-up Scheduled
+  - Follow-up Completed
+  - Lead Converted
+
+
+================================================================================
+9. STORED PROCEDURE
+================================================================================
+
+Name: GetLeadSummaryByRep
+Purpose: Retrieves analytics summary of leads assigned to a specific sales rep.
+
+Parameters:
+  IN repID INT — The representative ID to query
+
+Returns:
+  rep_id          — The representative ID
+  total_leads     — Total number of leads assigned to this rep
+  open_leads      — Count of leads with status = 'Open'
+  converted_leads — Count of leads with status = 'Converted'
+
+SQL Definition (MySQL):
+  CREATE PROCEDURE GetLeadSummaryByRep(IN repID INT)
+  BEGIN
+      SELECT
+          repID AS rep_id,
+          COUNT(*) AS total_leads,
+          SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) AS open_leads,
+          SUM(CASE WHEN status = 'Converted' THEN 1 ELSE 0 END) AS converted_leads
+      FROM leads
+      WHERE assigned_to = repID;
+  END;
+
+Usage in Application:
+  - MySQL: Called via cursor.callproc('GetLeadSummaryByRep', [rep_id])
+  - SQLite: Equivalent SELECT query simulated in database.py (SQLite has no
+    native stored procedure support)
+  - API Endpoint: GET /api/analytics/rep/<rep_id>
+  - UI: Dashboard "Stored Procedure Call" panel with representative dropdown
+
+
+================================================================================
+10. DATABASE TRIGGER
+================================================================================
+
+Name: after_lead_insert
+Event: AFTER INSERT ON leads
+Purpose: Automatically creates an audit log entry whenever a new lead is inserted,
+         ensuring complete audit trails without application-level code.
+
+SQL Definition:
+  CREATE TRIGGER after_lead_insert
+  AFTER INSERT ON leads FOR EACH ROW
+  BEGIN
+      INSERT INTO activity_log(lead_id, rep_id, action, action_date, description)
+      VALUES (NEW.lead_id, NEW.assigned_to, 'Lead Created', NOW(), 'New lead added.');
+  END;
+
+Behavior:
+  - Fires automatically at the database level on every INSERT into leads
+  - Uses NEW.lead_id and NEW.assigned_to to populate the log entry
+  - Works in both SQLite and MySQL implementations
+  - Demonstrates separation of business logic (audit) from application code
+
+
+================================================================================
+11. FUNCTIONAL MODULES
+================================================================================
+
+MODULE                          | IMPLEMENTATION STATUS | DESCRIPTION
+--------------------------------|----------------------|----------------------------------
+11.1 User Authentication        | Simulated (UI only)  | Role selector in sidebar simulates
+                                |                      | Administrator, Sales Manager, Sales Rep
+11.2 Lead Capture & Management  | Fully Implemented    | CRUD operations on leads via API
+11.3 Lead Assignment            | Fully Implemented    | Assign/reassign leads to reps
+11.4 Follow-Up Tracking         | Fully Implemented    | Schedule and complete follow-ups
+11.5 Customer Conversion        | Fully Implemented    | Convert leads to customers with revenue
+11.6 Reporting & Analytics      | Fully Implemented    | Dashboard stats, stored procedure, workload
+11.7 Activity Logging           | Fully Implemented    | Trigger + application-level logging
+
+
+────────────────────────────────────────────────────────────────────────────────
+11.1 Role-Based Access Control (Simulated)
+────────────────────────────────────────────────────────────────────────────────
+Role                  | Permissions
+----------------------|----------------------------------------------------------
+Administrator         | Full access — create, edit, delete, assign leads
+Sales Manager         | Create, edit, assign leads — CANNOT delete leads
+Sales Representative  | Create, edit leads — CANNOT assign or delete leads
+
+Note: Role permissions are enforced on the front-end UI. For a production system,
+      server-side authentication with password hashing and session management would
+      be added (as described in the project synopsis).
+
+
+================================================================================
+12. APPLICATIONS (REAL-WORLD USE CASES)
+================================================================================
+
+The Lead Management System has applications across multiple industries:
+
+  1. Sales and Marketing Teams
+     Streamlines lead-to-customer conversion for B2B and B2C businesses.
+
+  2. Real Estate
+     Tracks property inquiries from prospective buyers and assigns agents for follow-ups.
+
+  3. Banking and Finance
+     Manages loan inquiries, insurance leads, and investment interest from clients.
+
+  4. Healthcare
+     Tracks patient inquiry leads for hospitals, clinics, and health service providers.
+
+  5. Education
+     Manages student enrollment inquiries and follow-up for admissions teams.
+
+  6. IT and Software Companies
+     Tracks product demo requests, free trial sign-ups, and enterprise sales inquiries.
+
+  7. E-Commerce
+     Captures leads from marketing campaigns and tracks buyer interest for upselling.
+
+
+================================================================================
+13. FRONT-END AND BACK-END CONNECTIVITY
+================================================================================
+
+The application follows a three-tier architecture:
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                        PRESENTATION TIER (Browser)                      │
+  │  templates/index.html + static/css/style.css + JavaScript (SPA)         │
+  │  - Dashboard, Leads, Follow-Ups, Customers, Activity Logs tabs          │
+  │  - Modals for Add/Edit Lead, Assign, Convert, Schedule Follow-Up        │
+  │  - Role selector, toast notifications, real-time data rendering         │
+  └───────────────────────────────┬─────────────────────────────────────────┘
+                                  │ HTTP Requests (fetch API)
+                                  │ JSON Request/Response
+                                  ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                        APPLICATION TIER (Flask Server)                  │
+  │  app.py — REST API Routes                                               │
+  │  - Receives JSON from front-end                                         │
+  │  - Validates input, executes business logic                             │
+  │  - Calls database.py for SQL operations                               │
+  │  - Returns JSON responses with status codes (200, 201, 400, 404, 500)   │
+  └───────────────────────────────┬─────────────────────────────────────────┘
+                                  │ SQL Queries (parameterized)
+                                  ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                        DATA TIER (Database)                             │
+  │  SQLite (lms.db) OR MySQL (lead_management database)                    │
+  │  - Tables, Foreign Keys, Triggers, Stored Procedures                    │
+  │  - ACID transactions, referential integrity                             │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+
+CONNECTION FLOW (Example: Creating a New Lead):
+  1. User fills "New Lead" modal form in browser
+  2. JavaScript calls: POST /api/leads with JSON body
+     { first_name, last_name, email, phone, source, assigned_to }
+  3. Flask route add_lead() in app.py receives the request
+  4. Validates required fields (first_name, last_name)
+  5. Calls database.execute_query() with INSERT SQL
+  6. Database trigger after_lead_insert fires → logs to activity_log
+  7. Flask returns JSON: { "message": "Lead created successfully", "lead_id": N }
+  8. JavaScript shows toast notification and refreshes leads table
+
+
+CONFIGURATION (config.py):
+  DB_TYPE = 'sqlite'   # Change to 'mysql' for MySQL submission
+  SQLITE_DB_PATH = 'lms.db'
+  MYSQL_CONFIG = { host, user, password, database, port }
+
+
+================================================================================
+14. REST API ENDPOINTS
+================================================================================
+
+METHOD | ENDPOINT                              | DESCRIPTION
+-------|---------------------------------------|----------------------------------
+GET    | /                                     | Serve main dashboard HTML page
+GET    | /api/leads                            | List all leads (with rep & dept info)
+POST   | /api/leads                            | Create a new lead
+GET    | /api/leads/<lead_id>                  | Get single lead by ID
+PUT    | /api/leads/<lead_id>                  | Update lead details
+DELETE | /api/leads/<lead_id>                  | Delete a lead (cascades to customers/follow-ups)
+GET    | /api/reps                             | List all sales representatives
+GET    | /api/departments                      | List all departments
+POST   | /api/assignments                      | Assign lead to a representative
+GET    | /api/followups                        | List all follow-ups
+POST   | /api/followups                        | Schedule a new follow-up
+POST   | /api/followups/<id>/complete          | Mark follow-up as completed
+GET    | /api/customers                        | List all converted customers
+POST   | /api/customers/convert                | Convert a lead to customer
+GET    | /api/logs                             | Get last 50 activity log entries
+GET    | /api/analytics/overview               | Dashboard statistics overview
+GET    | /api/analytics/rep/<rep_id>           | Stored procedure rep summary
+
+
+================================================================================
+15. HOW THE SYSTEM WORKS (WORKFLOW)
+================================================================================
+
+LEAD LIFECYCLE:
+  1. CAPTURE    → New lead entered via "New Lead" button (status: Open)
+  2. ASSIGN     → Admin/Manager assigns lead to a sales representative
+  3. CONTACT    → Rep updates status to "Contacted", schedules follow-ups
+  4. FOLLOW-UP  → Rep conducts calls/meetings, marks follow-ups complete
+  5. CONVERT    → Qualified lead converted to Customer with deal value
+                  OR status set to "Lost" if lead does not convert
+
+STARTUP SEQUENCE:
+  1. Run: python app.py
+  2. Flask initializes database via database.init_db()
+  3. If tables don't exist → executes schema_sqlite.sql or schema_mysql.sql
+  4. If tables are empty → loads mock/sample data
+  5. Server starts on http://127.0.0.1:5000
+  6. Browser loads index.html → JavaScript fetches initial data from APIs
+
+DASHBOARD FEATURES:
+  - Total Leads, Open Leads, Converted Customers, Total Revenue stat cards
+  - Stored Procedure panel: select rep → shows assigned/open/converted counts
+  - Workload Distribution: bar chart of leads per representative
+  - Leads by Status and Leads by Source breakdowns
+
+DATA INTEGRITY:
+  - Foreign keys enforce valid references between tables
+  - ON DELETE CASCADE: deleting a lead removes its customers and follow-ups
+  - ON DELETE SET NULL: deleting a rep unassigns leads (doesn't delete them)
+  - UNIQUE on customers.lead_id prevents double conversion
+  - Trigger ensures every new lead is automatically audit-logged
+
+
+================================================================================
+16. PROJECT FILE STRUCTURE
+================================================================================
+
+dbms/
+├── app.py                  # Flask server — all REST API routes
+├── database.py             # DB connection, query execution, init, mock data
+├── config.py               # DB_TYPE toggle (sqlite/mysql), credentials
+├── schema_sqlite.sql       # SQLite DDL — tables, trigger
+├── schema_mysql.sql        # MySQL DDL — tables, stored procedure, trigger
+├── lms.db                  # SQLite database file (auto-generated)
+├── templates/
+│   └── index.html          # Single Page Application (HTML + JavaScript)
+├── static/
+│   └── css/
+│       └── style.css       # Responsive UI styling
+├── README.md               # Quick start guide
+└── info                    # This comprehensive documentation file
+
+
+================================================================================
+17. SETUP AND EXECUTION
+================================================================================
+
+PREREQUISITES:
+  - Python 3.8 or higher
+  - pip package manager
+
+INSTALL DEPENDENCIES:
+  pip install Flask mysql-connector-python
+
+RUN (SQLite — default, zero configuration):
+  python app.py
+  Open http://127.0.0.1:5000 in your browser
+
+SWITCH TO MYSQL (for submission/grading):
+  1. Start local MySQL server
+  2. Edit config.py: set DB_TYPE = 'mysql'
+  3. Update MYSQL_CONFIG with your username, password, port
+  4. Run python app.py
+  5. Database, tables, trigger, stored procedure, and mock data are created automatically
+
+
+================================================================================
+18. KEY DBMS CONCEPTS DEMONSTRATED
+================================================================================
+
+Concept                    | Where Demonstrated
+---------------------------|--------------------------------------------------
+Primary Keys               | All 6 tables have auto-increment PKs
+Foreign Keys               | Cross-table references with integrity constraints
+One-to-Many Relationships  | Department→Rep, Rep→Lead, Lead→FollowUp, etc.
+One-to-One Relationship    | Lead↔Customer (UNIQUE FK)
+Referential Integrity      | ON DELETE CASCADE / SET NULL rules
+Database Trigger           | after_lead_insert on leads table
+Stored Procedure           | GetLeadSummaryByRep(repID)
+Normalization (3NF/BCNF)   | Fully normalized schema design
+ACID Transactions          | commit() after write operations
+JOIN Queries               | Multi-table SELECTs in API endpoints
+Aggregate Functions        | COUNT, SUM in analytics queries
+Audit Trail / Logging      | activity_log table with trigger + app logging
+Dual RDBMS Support         | SQLite and MySQL with unified query interface
+
+
+================================================================================
+19. CONCLUSION
+================================================================================
+
+The Lead Management System is a robust, database-driven web application that
+addresses the core challenges faced by sales teams in managing leads effectively.
+By integrating Python Flask as the application server, HTML/CSS/JavaScript as the
+front-end, and SQLite/MySQL as the relational database back-end, the system
+provides a seamless, user-friendly interface with powerful data management
+capabilities.
+
+The system ensures data integrity through proper use of primary keys, foreign keys,
+stored procedures, and triggers. With features spanning lead capture, assignment,
+follow-up tracking, conversion management, and reporting analytics, the Lead
+Management System is a comprehensive DBMS mini project suited for academic
+evaluation and real-world organizational use across multiple industry verticals.
+
+================================================================================
+                              END OF DOCUMENTATION
+================================================================================
